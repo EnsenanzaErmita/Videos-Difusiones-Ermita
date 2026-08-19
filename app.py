@@ -41,8 +41,7 @@ if uploaded_images:
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
     with st.spinner(
-        "Aplicando plantilla con textos y líneas gigantes, generando"
-        " video..."
+        "Aplicando plantilla con textos de cobertura total y generando video..."
     ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
@@ -51,41 +50,41 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # Cargar una fuente extra grande (130 px para que abarque casi todo el alto)
+      # Cargar fuente con tamaño optimizado para abarcar todo el alto vertical
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font = ImageFont.truetype(font_path, 130)
+        font = ImageFont.truetype(font_path, 110)
       except:
         font = ImageFont.load_default()
 
-      # Procesar cada imagen con la plantilla institucional modificada
+      # Procesar cada imagen con la plantilla institucional mejorada
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
 
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
 
-        # Ajustar el área máxima de la foto dejando el espacio justo para los textos gigantes laterales
-        max_img_width = 880
-        max_img_height = 540
+        # Ajustar el tamaño de la foto central dejando el margen necesario para los textos laterales
+        max_img_width = 840
+        max_img_height = 520
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
         # 1. Crear lienzo base en Blanco
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Líneas centrales mucho más grandes y gruesas
-        # Franja Guinda principal de 36 píxeles de grosor en total
+        # 2. Líneas centrales con grosor notablemente mayor
+        # Franja Guinda principal de 48 píxeles de grosor total
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 18),
-                (canvas_width, canvas_height // 2 + 18),
+                (0, canvas_height // 2 - 24),
+                (canvas_width, canvas_height // 2 + 24),
             ],
             fill="#6B1426",
         )
-        # Franja Dorada central de 12 píxeles de grosor en total
+        # Franja Dorada central de 16 píxeles de grosor total
         draw.rectangle(
-            [(0, canvas_height // 2 - 6), (canvas_width, canvas_height // 2 + 6)],
+            [(0, canvas_height // 2 - 8), (canvas_width, canvas_height // 2 + 8)],
             fill="#D4AF37",
         )
 
@@ -94,25 +93,27 @@ if uploaded_images:
         paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 4. Textos verticales gigantes a los lados
-        def crear_texto_vertical(texto):
-          # Lienzo temporal con espacio para la tipografía gigante
-          txt_img = Image.new("RGBA", (450, 150), (255, 255, 255, 0))
+        # 4. Textos verticales abarcando todo el largo (alto del template)
+        def crear_texto_vertical_largo(texto):
+          # Creamos un lienzo que cubra exactamente los 720 píxeles de alto del template
+          txt_img = Image.new("RGBA", (canvas_height, 120), (255, 255, 255, 0))
           d = ImageDraw.Draw(txt_img)
-          d.text((10, 10), texto, fill="#6B1426", font=font)
+          
+          # Calcular posición para centrar el texto a lo largo de todo el lateral
+          d.text((30, 5), texto, fill="#6B1426", font=font)
+          
+          # Rotar 90 grados para que corra verticalmente de arriba a abajo
           return txt_img.rotate(90, expand=True)
 
         # Texto izquierdo (ISSSTE)
-        txt_izq = crear_texto_vertical("ISSSTE")
+        txt_izq = crear_texto_vertical_largo("ISSSTE")
         pos_y_izq = (canvas_height - txt_izq.height) // 2
-        template.paste(txt_izq, (10, pos_y_izq), txt_izq)
+        template.paste(txt_izq, (-150, pos_y_izq), txt_izq)
 
         # Texto derecho (C.M.F. ERMITA)
-        txt_der = crear_texto_vertical("C.M.F. ERMITA")
+        txt_der = crear_texto_vertical_largo("C.M.F. ERMITA")
         pos_y_der = (canvas_height - txt_der.height) // 2
-        template.paste(
-            txt_der, (canvas_width - txt_der.width - 10, pos_y_der), txt_der
-        )
+        template.paste(txt_der, (canvas_width - txt_der.width + 150, pos_y_der), txt_der)
 
         # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
@@ -129,7 +130,7 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional con textos y líneas gigantes generado con"
+            "¡Video institucional con diseño de cobertura total generado con"
             " éxito!"
         )
 
