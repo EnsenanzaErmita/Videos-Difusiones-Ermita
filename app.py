@@ -40,27 +40,35 @@ if uploaded_images:
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
     with st.spinner(
-        "Procesando tus imágenes y generando el video... Por favor espera."
+        "Procesando, ajustando tamaños y generando el video... Por favor espera."
     ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
       image_paths = []
-      # Guardar las imágenes subidas temporalmente para que MoviePy pueda leerlas
+      # Definir un tamaño estándar fijo para todas las imágenes del video (Ej. 1280x720 HD)
+      target_size = (1280, 720)
+
+      # Procesar, estandarizar tamaño y guardar temporalmente
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
-        # Convertir a RGB por si alguna imagen está en formato RGBA (PNG con transparencia)
+        
+        # Convertir a RGB (por si tienen transparencia PNG)
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
+          
+        # Redimensionar la imagen de manera uniforme al tamaño estándar
+        img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
+        
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
-        img.save(path, "JPEG")
+        img_resized.save(path, "JPEG")
         image_paths.append(path)
 
       # Definir la ruta del video de salida
       output_video_path = "video_difusion.mp4"
 
       try:
-        # Crear el clip de video usando MoviePy (importación corregida)
+        # Crear el clip de video usando MoviePy
         clip = ImageSequenceClip(image_paths, fps=1 / duracion_imagen)
         clip.write_videofile(
             output_video_path, fps=24, codec="libx264", audio=False
