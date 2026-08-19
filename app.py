@@ -13,7 +13,7 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión con Audio")
 st.write(
-    "Sube tus imágenes laterales, tus fotos principales, escribe un texto descriptivo para cada una y genera tu video institucional con voz automatizada."
+    "Sube tus imágenes laterales, tus fotos principales, escribe un texto descriptivo para cada una y genera tu video institucional con voz en español latino."
 )
 
 # 1. Cargar imágenes laterales institucionales (izquierda y derecha)
@@ -43,7 +43,7 @@ uploaded_images = st.file_uploader(
     key="principal",
 )
 
-# Diccionario o lista para almacenar los textos ingresados por el usuario
+# Diccionario para almacenar los textos ingresados por el usuario
 image_texts = {}
 
 if uploaded_images:
@@ -63,7 +63,7 @@ if uploaded_images:
       )
   st.markdown("---")
 
-# Configuración de duración por imagen por defecto (si no hay audio o por seguridad)
+# Configuración de duración mínima por imagen
 duracion_defecto = st.slider(
     "Duración mínima por imagen (segundos):",
     min_value=2,
@@ -75,7 +75,8 @@ if uploaded_images:
   # 3. Botón para crear el video con audio
   if st.button("🚀 Crear Video Institucional con Audio"):
     with st.spinner(
-        "Generando audios, procesando plantillas y renderizando video..."
+        "Generando audios en español latino, procesando plantillas y renderizando"
+        " video..."
     ):
       temp_dir = "temp_multimedia"
       os.makedirs(temp_dir, exist_ok=True)
@@ -171,34 +172,24 @@ if uploaded_images:
         template.save(img_path, "JPEG", quality=95)
         image_paths.append(img_path)
 
-        # Generar audio correspondiente a partir del texto ingresado
+        # Generar audio correspondiente en español latinoamericano (tld='com.mx')
         texto_actual = image_texts.get(idx, "").strip()
         if texto_actual:
-          tts = gTTS(text=texto_actual, lang="es", slow=False)
+          # tld='com.mx' fuerza el acento latinoamericano de manera natural
+          tts = gTTS(text=texto_actual, lang="es", tld="com.mx", slow=False)
           audio_path = os.path.join(temp_dir, f"audio_{idx:03d}.mp3")
           tts.save(audio_path)
-
-          # Cargar clip de audio para medir su duración exacta
-          from moviepy import AudioFileClip
 
           a_clip = AudioFileClip(audio_path)
           audio_clips.append(a_clip)
         else:
-          # Si no hay texto, creamos un audio de silencio o usamos duración por defecto
-          # Para simplificar con ImageSequenceClip asignamos duración por defecto si falta texto
           audio_clips.append(None)
 
       # Ruta del video resultante
       output_video_path = "video_difusion_con_audio.mp4"
 
       try:
-        # Calcular duraciones individuales basadas en el audio si existen, o usar estándar
-        duraciones = []
-        final_audio_clips = []
-
-        # Como moviepy requiere manejar concatenación de audios de forma precisa,
-        # asignaremos duraciones y unificaremos el audio total.
-        from moviepy import concatenate_audioclips, concatenate_videoclips
+        from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
 
         clip_list = []
         for i, path in enumerate(image_paths):
@@ -206,21 +197,15 @@ if uploaded_images:
           if i < len(audio_clips) and audio_clips[i] is not None:
             dur = max(audio_clips[i].duration + 0.5, duracion_defecto)
 
-          # Crear clip individual de imagen con su duración específica
-          from moviepy import ImageClip
-
           img_clip = ImageClip(path).with_duration(dur)
 
           if i < len(audio_clips) and audio_clips[i] is not None:
-            # Sincronizar audio con el clip de imagen
             img_clip = img_clip.with_audio(audio_clips[i])
 
           clip_list.append(img_clip)
 
-        # Unir todos los clips de video en secuencia
         final_video = concatenate_videoclips(clip_list, method="compose")
 
-        # Exportar video final con audio integrado
         final_video.write_videofile(
             output_video_path,
             fps=24,
@@ -229,7 +214,8 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional con locución en audio generado con éxito!"
+            "¡Video institucional con locución en español latino generado con"
+            " éxito!"
         )
 
         # Reproductor y Botón de Descarga
@@ -239,9 +225,9 @@ if uploaded_images:
         st.video(video_bytes)
 
         st.download_button(
-            label="📥 Descargar Video con Audio",
+            label="📥 Descargar Video con Audio Latino",
             data=video_bytes,
-            file_name="difusion_institucional_audio.mp4",
+            file_name="difusion_institucional_latino.mp4",
             mime="video/mp4",
         )
 
@@ -249,7 +235,6 @@ if uploaded_images:
         st.error(f"Ocurrió un error al generar el video con audio: {e}")
 
       finally:
-        # Limpieza de archivos temporales
         for path in image_paths:
           if os.path.exists(path):
             os.remove(path)
