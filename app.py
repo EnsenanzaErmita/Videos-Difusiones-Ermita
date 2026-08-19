@@ -1,16 +1,18 @@
 import os
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 from moviepy import ImageSequenceClip
 import streamlit as st
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Generador de Videos para Difusión", page_icon="🎬", layout="centered"
+    page_title="Generador de Videos - ISSSTE C.M.F. Ermita",
+    page_icon="🎬",
+    layout="centered",
 )
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tus imágenes del día, define la duración de cada una y haz clic en 'Crear Video'."
+    "Sube tus imágenes del día, define la duración y genera tu video con plantilla institucional."
 )
 
 # 1. Sección para cargar imágenes
@@ -39,67 +41,108 @@ if uploaded_images:
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
     with st.spinner(
-        "Aplicando plantilla, centrando imágenes y generando el video..."
+        "Aplicando plantilla institucional (ISSSTE / C.M.F. ERMITA) y generando"
+        " video..."
     ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
       image_paths = []
-      
-      # Definir el tamaño del lienzo de la "plantilla" (Formato Horizontal HD)
-      canvas_size = (1280, 720)
-      
-      # Color de fondo para los espacios vacíos (puedes elegir "black" o "white")
-      bg_color = "black" 
+      canvas_width, canvas_height = 1280, 720
+      canvas_size = (canvas_width, canvas_height)
 
-      # Procesar y ajustar cada imagen a la plantilla proporcionalmente
+      # Intentar cargar una fuente del sistema, de lo contrario usar la predeterminada
+      try:
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        font = ImageFont.truetype(font_path, 28)
+      except:
+        font = ImageFont.load_default()
+
+      # Procesar cada imagen con la plantilla institucional
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
-        
-        # Convertir a RGB si es necesario
+
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
 
-        # Ajustar la imagen proporcionalmente para que quepa dentro de 1280x720 sin deformarse
-        img.thumbnail(canvas_size, Image.Resampling.LANCZOS)
+        # Dejar espacio para los márgenes laterales (para los textos verticales) y la línea central
+        # Definimos el área máxima útil para la foto para que no choque con los textos laterales
+        max_img_width = 1000
+        max_img_height = 620
+        img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
-        # Crear un lienzo nuevo del tamaño exacto de la plantilla con el color de fondo
-        template = Image.new("RGB", canvas_size, bg_color)
+        # 1. Crear lienzo base en Blanco (Fondo Blanco)
+        template = Image.new("RGB", canvas_size, "white")
+        draw = ImageDraw.Draw(template)
 
-        # Calcular la posición exacta para centrar la imagen en el lienzo
-        paste_x = (canvas_size[0] - img.width) // 2
-        paste_y = (canvas_size[1] - img.height) // 2
+        # 2. Dibujar la línea horizontal guinda y oro a la mitad
+        # Línea principal Guinda (#6B1426)
+        draw.rectangle(
+            [(0, canvas_height // 2 - 3), (canvas_width, canvas_height // 2 + 3)],
+            fill="#6B1426",
+        )
+        # Detalle delgado Dorado (#D4AF37) justo al centro o borde de la línea
+        draw.rectangle(
+            [(0, canvas_height // 2 - 1), (canvas_width, canvas_height // 2 + 1)],
+            fill="#D4AF37",
+        )
 
-        # Pegar la imagen centrada sobre la plantilla
+        # 3. Centrar la foto en el lienzo (respetando sus proporciones para que no se deforme)
+        paste_x = (canvas_width - img.width) // 2
+        paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # Guardar la imagen procesada temporalmente
+        # 4. Crear textos verticales a los lados (ISSSTE a la izquierda, C.M.F. ERMITA a la derecha)
+        # Para rotar texto en PIL, creamos una pequeña imagen temporal transparente, escribimos el texto y la rotamos 90 grados
+        def crear_texto_vertical(texto, height):
+          # Imagen temporal alta y angosta
+          txt_img = Image.new("RGBA", (250, 40), (255, 255, 255, 0))
+          d = ImageDraw.Draw(txt_img)
+          # Color institucional guinda oscuro para el texto vertical
+          d.text((10, 5), texto, fill="#6B1426", font=font)
+          # Rotar 90 grados para que quede vertical
+          return txt_img.rotate(90, expand=True)
+
+        # Texto izquierdo (ISSSTE)
+        txt_izq = crear_texto_vertical("ISSSTE", canvas_height)
+        # Pegar en el margen izquierdo (centrado verticalmente)
+        pos_y_izq = (canvas_height - txt_izq.height) // 2
+        template.paste(txt_izq, (15, pos_y_izq), txt_izq)
+
+        # Texto derecho (C.M.F. ERMITA)
+        txt_der = crear_texto_vertical("C.M.F. ERMITA", canvas_height)
+        # Pegar en el margen derecho (centrado verticalmente)
+        pos_y_der = (canvas_height - txt_der.height) // 2
+        template.paste(
+            txt_der, (canvas_width - txt_der.width - 15, pos_y_der), txt_der
+        )
+
+        # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
         template.save(path, "JPEG", quality=95)
         image_paths.append(path)
 
-      # Definir la ruta del video de salida
+      # Ruta del video resultante
       output_video_path = "video_difusion.mp4"
 
       try:
-        # Crear el clip de video usando MoviePy
         clip = ImageSequenceClip(image_paths, fps=1 / duracion_imagen)
         clip.write_videofile(
             output_video_path, fps=24, codec="libx264", audio=False
         )
 
-        st.success("¡El video se ha generado con éxito y sin deformaciones!")
+        st.success("¡Video institucional generado con éxito!")
 
-        # 3. Reproductor y Botón de Descarga
+        # Reproductor y Botón de Descarga
         st.subheader("▶️ Vista previa del video:")
         video_file = open(output_video_path, "rb")
         video_bytes = video_file.read()
         st.video(video_bytes)
 
         st.download_button(
-            label="📥 Descargar Video para Difusión",
+            label="📥 Descargar Video de Difusión",
             data=video_bytes,
-            file_name="difusion_del_dia.mp4",
+            file_name="difusion_institucional.mp4",
             mime="video/mp4",
         )
 
@@ -107,7 +150,6 @@ if uploaded_images:
         st.error(f"Ocurrió un error al generar el video: {e}")
 
       finally:
-        # Limpieza de archivos temporales
         for path in image_paths:
           if os.path.exists(path):
             os.remove(path)
