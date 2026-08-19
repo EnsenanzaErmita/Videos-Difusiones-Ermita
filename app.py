@@ -22,7 +22,7 @@ uploaded_images = st.file_uploader(
     accept_multiple_files=True,
 )
 
-# Configuración de duración per imagen
+# Configuración de duración por imagen
 duracion_imagen = st.slider(
     "¿Cuántos segundos debe durar cada imagen en el video?",
     min_value=1,
@@ -40,7 +40,7 @@ if uploaded_images:
 
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
-    with st.spinner("Generando plantilla con fuente colosal y líneas gruesas..."):
+    with st.spinner("Generando video con texto masivo y de extremo a extremo..."):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -48,14 +48,14 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # Fuente verdaderamente gigante (200 px) para asegurar el cambio drástico de tamaño
+      # Fuente verdaderamente gigante (160 px para impacto total)
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font = ImageFont.truetype(font_path, 200)
+        font = ImageFont.truetype(font_path, 160)
       except:
         font = ImageFont.load_default()
 
-      # Procesar cada imagen con la plantilla institucional optimizada
+      # Procesar cada imagen con la plantilla institucional
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
 
@@ -66,12 +66,12 @@ if uploaded_images:
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Ajustar la foto central dejando espacio para los costados
-        max_img_width = 860
+        # 2. Ajustar la foto central dejando espacio para los textos masivos de los lados
+        max_img_width = 820
         max_img_height = 460
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
-        # 3. Líneas centrales con gran grosor (guinda de 30px y oro de 10px)
+        # 3. Líneas centrales con gran grosor
         draw.rectangle(
             [
                 (0, canvas_height // 2 - 30),
@@ -92,25 +92,25 @@ if uploaded_images:
         paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 5. Función de textos laterales con fuente colosal de extremo a extremo
-        def crear_texto_gigante_real(texto):
-          # Lienzo temporal con el alto exacto del canvas (720px) y altura de caja generosa para los 200px
-          txt_canvas = Image.new("RGBA", (canvas_height, 220), (255, 255, 255, 0))
+        # 5. Motor corregido para letras gigantes sin restricciones de tamaño
+        def crear_texto_masivo(texto):
+          # Creamos una tira vertical del tamaño completo del alto del video (720px) y ancho de 200px
+          txt_canvas = Image.new("RGBA", (canvas_height, 200), (255, 255, 255, 0))
           d = ImageDraw.Draw(txt_canvas)
           
-          # Escribir el texto con la fuente de tamaño 200
-          d.text((10, 5), texto, fill="#6B1426", font=font)
+          # Escribir el texto con la fuente gigante de 160px
+          d.text((15, 10), texto, fill="#6B1426", font=font)
           
-          # Rotar 90 grados para que corra verticalmente cubriendo todo el alto
+          # Rotar 90 grados para que corra verticalmente cubriendo todo el borde
           return txt_canvas.rotate(90, expand=True)
 
         # Texto izquierdo (ISSSTE)
-        txt_izq = crear_texto_gigante_real("ISSSTE")
-        template.paste(txt_izq, (-25, 0), txt_izq)
+        txt_izq = crear_texto_masivo("ISSSTE")
+        template.paste(txt_izq, (-40, 0), txt_izq)
 
         # Texto derecho (C.M.F. ERMITA)
-        txt_der = crear_texto_gigante_real("C.M.F. ERMITA")
-        template.paste(txt_der, (canvas_width - txt_der.width + 25, 0), txt_der)
+        txt_der = crear_texto_masivo("C.M.F. ERMITA")
+        template.paste(txt_der, (canvas_width - txt_der.width + 40, 0), txt_der)
 
         # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
@@ -126,9 +126,7 @@ if uploaded_images:
             output_video_path, fps=24, codec="libx264", audio=False
         )
 
-        st.success(
-            "¡Video institucional generado con éxito, tipografía colosal aplicada!"
-        )
+        st.success("¡Video generado con éxito! Tipografía masiva aplicada.")
 
         # Reproductor y Botón de Descarga
         st.subheader("▶️ Vista previa del video:")
