@@ -12,7 +12,7 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tu imagen principal, tus dos imágenes laterales y genera tu video institucional limpio y con título grande."
+    "Sube tu imagen principal en tamaño grande, tus dos imágenes laterales y genera tu video institucional."
 )
 
 # 1. Cargar imágenes laterales institucionales (izquierda y derecha)
@@ -53,7 +53,9 @@ duracion_imagen = st.slider(
 if uploaded_images:
   # 3. Botón para crear el video
   if st.button("🚀 Crear Video Institucional"):
-    with st.spinner("Generando plantilla sin líneas superiores y título grande..."):
+    with st.spinner(
+        "Generando plantilla con imagen central ampliada y sin deformación..."
+    ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -71,10 +73,10 @@ if uploaded_images:
       if img_lat_der_file:
         lat_der_img = Image.open(img_lat_der_file).convert("RGBA")
 
-      # Cargar fuente mucho más grande para el título superior horizontal
+      # Cargar fuente para el título superior horizontal grande
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_titulo = ImageFont.truetype(font_path, 65)  # Título bien grande
+        font_titulo = ImageFont.truetype(font_path, 65)
       except:
         font_titulo = ImageFont.load_default()
 
@@ -88,34 +90,34 @@ if uploaded_images:
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Dibujar las líneas guinda y dorada al centro (por detrás de las imágenes)
+        # 2. Dibujar las líneas guinda y dorada al centro (por detrás)
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 35),
-                (canvas_width, canvas_height // 2 + 35),
+                (0, canvas_height // 2 - 45),
+                (canvas_width, canvas_height // 2 + 45),
             ],
             fill="#6B1426",
         )
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 12),
-                (canvas_width, canvas_height // 2 + 12),
+                (0, canvas_height // 2 - 15),
+                (canvas_width, canvas_height // 2 + 15),
             ],
             fill="#D4AF37",
         )
 
-        # 3. Procesar y pegar la Imagen Central Principal
-        max_img_width = 700
-        max_img_height = 480
+        # 3. Procesar y pegar la Imagen Central Principal (Ampliación máxima sin deformar)
+        max_img_width = 950  # Mucho más grande
+        max_img_height = 550
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
         paste_x = (canvas_width - img.width) // 2
-        paste_y = ((canvas_height - img.height) // 2) + 30
+        paste_y = ((canvas_height - img.height) // 2) + 25
         template.paste(img, (paste_x, paste_y))
 
-        # 4. Insertar imagen lateral IZQUIERDA (mide 1 cuarto de la original aprox)
+        # 4. Insertar imagen lateral IZQUIERDA (Proporcional a 1 cuarto de tamaño)
         if lat_izq_img:
-          target_w = img.width // 4
+          target_w = img.width // 4.5
           target_h = int(
               lat_izq_img.height
               * (target_w / lat_izq_img.width)
@@ -123,10 +125,10 @@ if uploaded_images:
           lat_izq_resized = lat_izq_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          pos_izq_x = 50
+          pos_izq_x = 35
           pos_izq_y = (
               canvas_height - lat_izq_resized.height
-          ) // 2 + 30
+          ) // 2 + 25
           template.paste(
               lat_izq_resized,
               (pos_izq_x, pos_izq_y),
@@ -135,7 +137,7 @@ if uploaded_images:
 
         # 5. Insertar imagen lateral DERECHA
         if lat_der_img:
-          target_w = img.width // 4
+          target_w = img.width // 4.5
           target_h = int(
               lat_der_img.height
               * (target_w / lat_der_img.width)
@@ -143,19 +145,19 @@ if uploaded_images:
           lat_der_resized = lat_der_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          pos_der_x = canvas_width - lat_der_resized.width - 50
+          pos_der_x = canvas_width - lat_der_resized.width - 35
           pos_der_y = (
               canvas_height - lat_der_resized.height
-          ) // 2 + 30
+          ) // 2 + 25
           template.paste(
               lat_der_resized,
               (pos_der_x, pos_der_y),
               lat_der_resized,
           )
 
-        # 6. Título superior horizontal grande en la parte izquierda: "C.M.F. ERMITA" (Sin líneas abajo)
+        # 6. Título superior horizontal grande en la parte izquierda: "C.M.F. ERMITA"
         draw.text(
-            (45, 30),
+            (45, 25),
             "C.M.F. ERMITA",
             fill="#6B1426",
             font=font_titulo,
@@ -176,7 +178,7 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional generado con éxito (sin líneas superiores y título grande)!"
+            "¡Video institucional generado con éxito (imagen central ampliada sin deformar)!"
         )
 
         # Reproductor y Botón de Descarga
