@@ -12,7 +12,7 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tu imagen principal en gran tamaño, tus dos imágenes laterales y genera tu video institucional limpio."
+    "Sube tu imagen principal a gran escala, tus dos imágenes laterales y genera tu video institucional."
 )
 
 # 1. Cargar imágenes laterales institucionales (izquierda y derecha)
@@ -53,7 +53,7 @@ duracion_imagen = st.slider(
 if uploaded_images:
   # 3. Botón para crear el video
   if st.button("🚀 Crear Video Institucional"):
-    with st.spinner("Generando plantilla limpia con imagen central ampliada..."):
+    with st.spinner("Generando plantilla con imagen central a tamaño máximo..."):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -84,31 +84,31 @@ if uploaded_images:
         # 2. Dibujar las líneas guinda y dorada al centro (por detrás)
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 50),
-                (canvas_width, canvas_height // 2 + 50),
+                (0, canvas_height // 2 - 60),
+                (canvas_width, canvas_height // 2 + 60),
             ],
             fill="#6B1426",
         )
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 18),
-                (canvas_width, canvas_height // 2 + 18),
+                (0, canvas_height // 2 - 20),
+                (canvas_width, canvas_height // 2 + 20),
             ],
             fill="#D4AF37",
         )
 
-        # 3. Procesar y pegar la Imagen Central Principal (Ampliación máxima sin deformar)
-        max_img_width = 980
-        max_img_height = 580
+        # 3. Procesar y pegar la Imagen Central Principal (AMPLIACIÓN MÁXIMA SIN DEFORMAR)
+        max_img_width = 1120
+        max_img_height = 640
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
         paste_x = (canvas_width - img.width) // 2
         paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 4. Insertar imagen lateral IZQUIERDA (Proporcional)
+        # 4. Insertar imagen lateral IZQUIERDA (Ajustada proporcionalmente de forma sutil)
         if lat_izq_img:
-          target_w = img.width // 4.5
+          target_w = 110  # Ancho fijo controlado para que no opaque la foto central
           target_h = int(
               lat_izq_img.height
               * (target_w / lat_izq_img.width)
@@ -116,7 +116,7 @@ if uploaded_images:
           lat_izq_resized = lat_izq_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          pos_izq_x = 35
+          pos_izq_x = 20
           pos_izq_y = (canvas_height - lat_izq_resized.height) // 2
           template.paste(
               lat_izq_resized,
@@ -126,7 +126,7 @@ if uploaded_images:
 
         # 5. Insertar imagen lateral DERECHA
         if lat_der_img:
-          target_w = img.width // 4.5
+          target_w = 110
           target_h = int(
               lat_der_img.height
               * (target_w / lat_der_img.width)
@@ -134,7 +134,7 @@ if uploaded_images:
           lat_der_resized = lat_der_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          pos_der_x = canvas_width - lat_der_resized.width - 35
+          pos_der_x = canvas_width - lat_der_resized.width - 20
           pos_der_y = (canvas_height - lat_der_resized.height) // 2
           template.paste(
               lat_der_resized,
@@ -157,7 +157,7 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional generado con éxito (limpio de textos y con imagen central ampliada)!"
+            "¡Video institucional generado con éxito (imagen central a máxima escala)!"
         )
 
         # Reproductor y Botón de Descarga
