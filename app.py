@@ -1,6 +1,7 @@
 import os
+from gtts import gTTS
+from moviepy import AudioFileClip, ImageSequenceClip
 from PIL import Image, ImageDraw
-from moviepy import ImageSequenceClip
 import streamlit as st
 
 # Configuración de la página
@@ -10,9 +11,9 @@ st.set_page_config(
     layout="centered",
 )
 
-st.title("🎬 Generador Diario de Videos para Difusión")
+st.title("🎬 Generador Diario de Videos para Difusión con Audio")
 st.write(
-    "Sube tu imagen principal en tamaño máximo, tus dos imágenes laterales de mayor tamaño y genera tu video institucional."
+    "Sube tus imágenes laterales, tus fotos principales, escribe un texto descriptivo para cada una y genera tu video institucional con voz automatizada."
 )
 
 # 1. Cargar imágenes laterales institucionales (izquierda y derecha)
@@ -33,8 +34,8 @@ with col_r:
       key="lat_der",
   )
 
-# 2. Sección para cargar las imágenes principales del día
-st.subheader("🖼️ 2. Imágenes Principales del Día")
+# 2. Sección para cargar las imágenes principales del día y sus textos descriptivos
+st.subheader("🖼️ 2. Imágenes Principales y Textos para Audio")
 uploaded_images = st.file_uploader(
     "Sube las fotos centrales del día (puedes seleccionar varias):",
     type=["png", "jpg", "jpeg"],
@@ -42,22 +43,45 @@ uploaded_images = st.file_uploader(
     key="principal",
 )
 
-# Configuración de duración por imagen
-duracion_imagen = st.slider(
-    "¿Cuántos segundos debe durar cada imagen en el video?",
-    min_value=1,
+# Diccionario o lista para almacenar los textos ingresados por el usuario
+image_texts = {}
+
+if uploaded_images:
+  st.markdown(
+      "--- \n ✍️ **Escribe el texto que se dirá en audio para cada imagen:**"
+  )
+  for idx, img_file in enumerate(uploaded_images):
+    col_img, col_txt = st.columns([1, 2])
+    with col_img:
+      st.image(img_file, width=150, caption=f"Imagen {idx + 1}")
+    with col_txt:
+      image_texts[idx] = st.text_area(
+          f"Texto para la imagen {idx + 1}:",
+          placeholder="Ej. Hoy realizamos jornada de vacunación...",
+          key=f"text_{idx}",
+          height=100,
+      )
+  st.markdown("---")
+
+# Configuración de duración por imagen por defecto (si no hay audio o por seguridad)
+duracion_defecto = st.slider(
+    "Duración mínima por imagen (segundos):",
+    min_value=2,
     max_value=10,
-    value=3,
+    value=4,
 )
 
 if uploaded_images:
-  # 3. Botón para crear el video
-  if st.button("🚀 Crear Video Institucional"):
-    with st.spinner("Generando plantilla con imágenes laterales más grandes..."):
-      temp_dir = "temp_imagenes"
+  # 3. Botón para crear el video con audio
+  if st.button("🚀 Crear Video Institucional con Audio"):
+    with st.spinner(
+        "Generando audios, procesando plantillas y renderizando video..."
+    ):
+      temp_dir = "temp_multimedia"
       os.makedirs(temp_dir, exist_ok=True)
 
       image_paths = []
+      audio_clips = []
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
@@ -71,7 +95,7 @@ if uploaded_images:
       if img_lat_der_file:
         lat_der_img = Image.open(img_lat_der_file).convert("RGBA")
 
-      # Procesar cada imagen principal
+      # Procesar cada imagen principal y su texto
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
         if img.mode in ("RGBA", "P"):
@@ -106,7 +130,7 @@ if uploaded_images:
         paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 4. Insertar imagen lateral IZQUIERDA (Más grande: ancho de 180 píxeles)
+        # 4. Insertar imagen lateral IZQUIERDA
         if lat_izq_img:
           target_w = 180
           target_h = int(
@@ -124,7 +148,7 @@ if uploaded_images:
               lat_izq_resized,
           )
 
-        # 5. Insertar imagen lateral DERECHA (Más grande: ancho de 180 píxeles)
+        # 5. Insertar imagen lateral DERECHA
         if lat_der_img:
           target_w = 180
           target_h = int(
@@ -143,42 +167,95 @@ if uploaded_images:
           )
 
         # Guardar imagen procesada temporalmente
-        path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
-        template.save(path, "JPEG", quality=95)
-        image_paths.append(path)
+        img_path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
+        template.save(img_path, "JPEG", quality=95)
+        image_paths.append(img_path)
+
+        # Generar audio correspondiente a partir del texto ingresado
+        texto_actual = image_texts.get(idx, "").strip()
+        if texto_actual:
+          tts = gTTS(text=texto_actual, lang="es", slow=False)
+          audio_path = os.path.join(temp_dir, f"audio_{idx:03d}.mp3")
+          tts.save(audio_path)
+
+          # Cargar clip de audio para medir su duración exacta
+          from moviepy import AudioFileClip
+
+          a_clip = AudioFileClip(audio_path)
+          audio_clips.append(a_clip)
+        else:
+          # Si no hay texto, creamos un audio de silencio o usamos duración por defecto
+          # Para simplificar con ImageSequenceClip asignamos duración por defecto si falta texto
+          audio_clips.append(None)
 
       # Ruta del video resultante
-      output_video_path = "video_difusion.mp4"
+      output_video_path = "video_difusion_con_audio.mp4"
 
       try:
-        clip = ImageSequenceClip(image_paths, fps=1 / duracion_imagen)
-        clip.write_videofile(
-            output_video_path, fps=24, codec="libx264", audio=False
+        # Calcular duraciones individuales basadas en el audio si existen, o usar estándar
+        duraciones = []
+        final_audio_clips = []
+
+        # Como moviepy requiere manejar concatenación de audios de forma precisa,
+        # asignaremos duraciones y unificaremos el audio total.
+        from moviepy import concatenate_audioclips, concatenate_videoclips
+
+        clip_list = []
+        for i, path in enumerate(image_paths):
+          dur = duracion_defecto
+          if i < len(audio_clips) and audio_clips[i] is not None:
+            dur = max(audio_clips[i].duration + 0.5, duracion_defecto)
+
+          # Crear clip individual de imagen con su duración específica
+          from moviepy import ImageClip
+
+          img_clip = ImageClip(path).with_duration(dur)
+
+          if i < len(audio_clips) and audio_clips[i] is not None:
+            # Sincronizar audio con el clip de imagen
+            img_clip = img_clip.with_audio(audio_clips[i])
+
+          clip_list.append(img_clip)
+
+        # Unir todos los clips de video en secuencia
+        final_video = concatenate_videoclips(clip_list, method="compose")
+
+        # Exportar video final con audio integrado
+        final_video.write_videofile(
+            output_video_path,
+            fps=24,
+            codec="libx264",
+            audio_codec="aac",
         )
 
         st.success(
-            "¡Video institucional generado con éxito (imágenes laterales más grandes)!"
+            "¡Video institucional con locución en audio generado con éxito!"
         )
 
         # Reproductor y Botón de Descarga
-        st.subheader("▶️ Vista previa del video:")
+        st.subheader("▶️ Vista previa del video con audio:")
         video_file = open(output_video_path, "rb")
         video_bytes = video_file.read()
         st.video(video_bytes)
 
         st.download_button(
-            label="📥 Descargar Video de Difusión",
+            label="📥 Descargar Video con Audio",
             data=video_bytes,
-            file_name="difusion_institucional.mp4",
+            file_name="difusion_institucional_audio.mp4",
             mime="video/mp4",
         )
 
       except Exception as e:
-        st.error(f"Ocurrió un error al generar el video: {e}")
+        st.error(f"Ocurrió un error al generar el video con audio: {e}")
 
       finally:
+        # Limpieza de archivos temporales
         for path in image_paths:
           if os.path.exists(path):
             os.remove(path)
+        for i in range(len(uploaded_images)):
+          a_path = os.path.join(temp_dir, f"audio_{i:03d}.mp3")
+          if os.path.exists(a_path):
+            os.remove(a_path)
         if os.path.exists(temp_dir):
           os.rmdir(temp_dir)
