@@ -50,7 +50,7 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # Cargar una fuente más grande (aproximadamente 200% más grande: de 28 a 56 px)
+      # Cargar fuente grande
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
         font = ImageFont.truetype(font_path, 56)
@@ -64,7 +64,7 @@ if uploaded_images:
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
 
-        # Ajustar el área máxima de la foto dejando espacio adecuado para los textos laterales grandes
+        # Ajustar el área máxima de la foto
         max_img_width = 960
         max_img_height = 580
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
@@ -73,13 +73,11 @@ if uploaded_images:
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Línea horizontal guinda y oro más gruesas (aprox. 200% más de grosor)
-        # Grosor guinda ampliado a 12 píxeles en total
+        # 2. Línea horizontal guinda y oro más gruesas
         draw.rectangle(
             [(0, canvas_height // 2 - 6), (canvas_width, canvas_height // 2 + 6)],
             fill="#6B1426",
         )
-        # Detalle dorado interior ampliado a 4 píxeles
         draw.rectangle(
             [(0, canvas_height // 2 - 2), (canvas_width, canvas_height // 2 + 2)],
             fill="#D4AF37",
@@ -91,20 +89,59 @@ if uploaded_images:
         template.paste(img, (paste_x, paste_y))
 
         # 4. Textos verticales ampliados a los lados
-        def crear_texto_vertical(texto, height):
-          # Lienzo temporal más ancho para albergar la fuente grande
+        def crear_texto_vertical(texto):
           txt_img = Image.new("RGBA", (300, 70), (255, 255, 255, 0))
           d = ImageDraw.Draw(txt_img)
           d.text((10, 5), texto, fill="#6B1426", font=font)
           return txt_img.rotate(90, expand=True)
 
         # Texto izquierdo (ISSSTE)
-        txt_izq = crear_texto_vertical("ISSSTE", canvas_height)
+        txt_izq = crear_texto_vertical("ISSSTE")
         pos_y_izq = (canvas_height - txt_izq.height) // 2
         template.paste(txt_izq, (20, pos_y_izq), txt_izq)
 
         # Texto derecho (C.M.F. ERMITA)
-        txt_der = crear_texto_vertical("C.M.F. ERMITA", canvas_height)
+        txt_der = crear_texto_vertical("C.M.F. ERMITA")
         pos_y_der = (canvas_height - txt_der.height) // 2
-        template.paste(
-            txt_der, (canvas_width - txt_der.
+        template.paste(txt_der, (canvas_width - txt_der.width - 20, pos_y_der), txt_der)
+
+        # Guardar imagen procesada temporalmente
+        path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
+        template.save(path, "JPEG", quality=95)
+        image_paths.append(path)
+
+      # Ruta del video resultante
+      output_video_path = "video_difusion.mp4"
+
+      try:
+        clip = ImageSequenceClip(image_paths, fps=1 / duracion_imagen)
+        clip.write_videofile(
+            output_video_path, fps=24, codec="libx264", audio=False
+        )
+
+        st.success(
+            "¡Video institucional con diseño ampliado generado con éxito!"
+        )
+
+        # Reproductor y Botón de Descarga
+        st.subheader("▶️ Vista previa del video:")
+        video_file = open(output_video_path, "rb")
+        video_bytes = video_file.read()
+        st.video(video_bytes)
+
+        st.download_button(
+            label="📥 Descargar Video de Difusión",
+            data=video_bytes,
+            file_name="difusion_institucional.mp4",
+            mime="video/mp4",
+        )
+
+      except Exception as e:
+        st.error(f"Ocurrió un error al generar el video: {e}")
+
+      finally:
+        for path in image_paths:
+          if os.path.exists(path):
+            os.remove(path)
+        if os.path.exists(temp_dir):
+          os.rmdir(temp_dir)
