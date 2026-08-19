@@ -12,23 +12,23 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tu imagen principal, tus dos imágenes laterales y genera tu video institucional de forma automática."
+    "Sube tu imagen principal, tus dos imágenes laterales y genera tu video institucional con líneas de fondo."
 )
 
-# 1. Cargar imágenes laterales institucionales fijas o personalizadas opcionales
+# 1. Cargar imágenes laterales institucionales (izquierda y derecha)
 st.subheader("📌 1. Imágenes Laterales (Izquierda y Derecha)")
 col_l, col_r = st.columns(2)
 
 with col_l:
   img_lat_izq_file = st.file_uploader(
-      "Imagen lateral IZQUIERDA (ej. Logo/Escudo):",
+      "Imagen lateral IZQUIERDA:",
       type=["png", "jpg", "jpeg"],
       key="lat_izq",
   )
 
 with col_r:
   img_lat_der_file = st.file_uploader(
-      "Imagen lateral DERECHA (ej. Institución/Campaña):",
+      "Imagen lateral DERECHA:",
       type=["png", "jpg", "jpeg"],
       key="lat_der",
   )
@@ -53,9 +53,7 @@ duracion_imagen = st.slider(
 if uploaded_images:
   # 3. Botón para crear el video
   if st.button("🚀 Crear Video Institucional"):
-    with st.spinner(
-        "Generando plantillas con elementos laterales y título superior..."
-    ):
+    with st.spinner("Generando plantilla con líneas institucionales al fondo..."):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -63,12 +61,12 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # Preparar imagen lateral izquierda si existe
+      # Preparar imagen lateral izquierda
       lat_izq_img = None
       if img_lat_izq_file:
         lat_izq_img = Image.open(img_lat_izq_file).convert("RGBA")
 
-      # Preparar imagen lateral derecha si existe
+      # Preparar imagen lateral derecha
       lat_der_img = None
       if img_lat_der_file:
         lat_der_img = Image.open(img_lat_der_file).convert("RGBA")
@@ -90,20 +88,34 @@ if uploaded_images:
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Imagen Central (Ajustada para dejar espacio a los lados y arriba/abajo)
+        # 2. PRIMERO: Dibujar las líneas guinda y dorada al centro (por detrás de las imágenes)
+        draw.rectangle(
+            [
+                (0, canvas_height // 2 - 35),
+                (canvas_width, canvas_height // 2 + 35),
+            ],
+            fill="#6B1426",
+        )
+        draw.rectangle(
+            [
+                (0, canvas_height // 2 - 12),
+                (canvas_width, canvas_height // 2 + 12),
+            ],
+            fill="#D4AF37",
+        )
+
+        # 3. SEGUNDO: Procesar y pegar la Imagen Central Principal
         max_img_width = 700
         max_img_height = 480
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
-        # Coordenadas centrales de la imagen principal
         paste_x = (canvas_width - img.width) // 2
         paste_y = ((canvas_height - img.height) // 2) + 30
         template.paste(img, (paste_x, paste_y))
 
-        # 3. Insertar imagen lateral IZQUIERDA (Debe medir 1 cuarto de la original aprox o un tamaño proporcional adecuado)
+        # 4. TERCERO: Insertar imagen lateral IZQUIERDA (mide 1 cuarto de la original aprox)
         if lat_izq_img:
-          # Redimensionar a un cuarto de la anchura estándar o escala proporcional
-          target_w = img.width // 2.5
+          target_w = img.width // 4
           target_h = int(
               lat_izq_img.height
               * (target_w / lat_izq_img.width)
@@ -111,8 +123,7 @@ if uploaded_images:
           lat_izq_resized = lat_izq_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          # Centrada a la izquierda del espacio libre
-          pos_izq_x = 40
+          pos_izq_x = 50
           pos_izq_y = (
               canvas_height - lat_izq_resized.height
           ) // 2 + 30
@@ -122,9 +133,9 @@ if uploaded_images:
               lat_izq_resized,
           )
 
-        # 4. Insertar imagen lateral DERECHA
+        # 5. CUARTO: Insertar imagen lateral DERECHA
         if lat_der_img:
-          target_w = img.width // 2.5
+          target_w = img.width // 4
           target_h = int(
               lat_der_img.height
               * (target_w / lat_der_img.width)
@@ -132,8 +143,7 @@ if uploaded_images:
           lat_der_resized = lat_der_img.resize(
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
-          # Centrada a la derecha del espacio libre
-          pos_der_x = canvas_width - lat_der_resized.width - 40
+          pos_der_x = canvas_width - lat_der_resized.width - 50
           pos_der_y = (
               canvas_height - lat_der_resized.height
           ) // 2 + 30
@@ -143,8 +153,7 @@ if uploaded_images:
               lat_der_resized,
           )
 
-        # 5. Título superior horizontal en la parte izquierda: "C.M.F. ERMITA"
-        # Franja superior institucional opcional o texto directo con colores institucionales (#6B1426 Guinda)
+        # 6. QUINTO: Título superior horizontal en la parte izquierda: "C.M.F. ERMITA"
         draw.text(
             (45, 35),
             "C.M.F. ERMITA",
@@ -152,9 +161,9 @@ if uploaded_images:
             font=font_titulo,
         )
 
-        # Línea divisoria elegante bajo el título
-        draw.rectangle([(45, 90), (canvas_width - 45, 96)], fill="#6B1426")
-        draw.rectangle([(45, 97), (canvas_width - 45, 101)], fill="#D4AF37")
+        # Línea divisoria elegante bajo el título superior
+        draw.rectangle([(45, 90), (canvas_width - 45, 95)], fill="#6B1426")
+        draw.rectangle([(45, 96), (canvas_width - 45, 99)], fill="#D4AF37")
 
         # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
@@ -171,7 +180,7 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional con imágenes laterales generado con éxito!"
+            "¡Video institucional generado con las líneas institucionales por detrás con éxito!"
         )
 
         # Reproductor y Botón de Descarga
