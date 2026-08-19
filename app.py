@@ -40,7 +40,7 @@ if uploaded_images:
 
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
-    with st.spinner("Generando video con textos laterales gigantes y bien posicionados..."):
+    with st.spinner("Generando video con texto masivo (Tamaño Colosal)..."):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -48,10 +48,10 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # Fuente grande y visible
+      # FUENTE GIGANTE EXTREMA (320 px) para abarcar todo el alto disponible
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font = ImageFont.truetype(font_path, 110)
+        font = ImageFont.truetype(font_path, 320)
       except:
         font = ImageFont.load_default()
 
@@ -67,8 +67,8 @@ if uploaded_images:
         draw = ImageDraw.Draw(template)
 
         # 2. Ajustar la foto central
-        max_img_width = 840
-        max_img_height = 480
+        max_img_width = 820
+        max_img_height = 460
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
         # 3. Líneas centrales con gran grosor
@@ -92,45 +92,30 @@ if uploaded_images:
         paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 5. Función corregida para centrar perfectamente el texto vertical de extremo a extremo
-        def crear_texto_vertical_exacto(texto):
-          # Creamos un bloque transparente que mide exactamente el alto del video (720px) x 150px de ancho
-          txt_canvas = Image.new("RGBA", (150, canvas_height), (255, 255, 255, 0))
-          d = ImageDraw.Draw(txt_canvas)
-          
-          # Como vamos a rotar 90 grados, dibujamos el texto horizontalmente primero dentro de este bloque,
-          # pero girado de abajo hacia arriba o viceversa. Usamos rotate(90, expand=True) sobre un lienzo 
-          # donde la dimensión horizontal sea el alto del canvas.
-          pass
-
-        # Método directo y seguro: creamos una tira horizontal del tamaño del alto del video (720x150)
-        def generar_tira_rotada(texto):
-          # Lienzo horizontal temporal de 720 de ancho por 150 de alto
-          tira = Image.new("RGBA", (720, 150), (255, 255, 255, 0))
+        # 5. Motor enfocado al 100% en tamaño masivo de la letra
+        def generar_tira_rotada_masiva(texto):
+          # Creamos una tira horizontal grande de 1280 de ancho (el largo exacto del video) por 380 de alto
+          tira = Image.new("RGBA", (1280, 380), (255, 255, 255, 0))
           d = ImageDraw.Draw(tira)
           
-          # Escribir el texto centrado horizontalmente en la tira
-          # Usamos textbbox para medir el texto y centrarlo a lo largo de los 720 píxeles
+          # Escribir el texto con la fuente gigante de 320px centrada horizontalmente
           bbox = d.textbbox((0, 0), texto, font=font)
           text_width = bbox[2] - bbox[0]
-          text_height = bbox[3] - bbox[1]
           
-          x_pos = (720 - text_width) // 2
-          y_pos = (150 - text_height) // 2 - 10
+          x_pos = (1280 - text_width) // 2
+          y_pos = (380 - 320) // 2 - 20
           
           d.text((x_pos, y_pos), texto, fill="#6B1426", font=font)
           
-          # Rotar 90 grados en sentido horario para que quede vertical de arriba a abajo
+          # Rotar 90 grados para que ocupe de arriba a abajo con la escala colosal
           return tira.rotate(90, expand=True)
 
-        # Texto izquierdo (ISSSTE)
-        txt_izq = generar_tira_rotada("ISSSTE")
-        # Se pega exactamente pegado a la izquierda (X=5, Y=0)
+        # Texto izquierdo (ISSSTE) con coordenadas fijas respetadas
+        txt_izq = generar_tira_rotada_masiva("ISSSTE")
         template.paste(txt_izq, (5, 0), txt_izq)
 
-        # Texto derecho (C.M.F. ERMITA)
-        txt_der = generar_tira_rotada("C.M.F. ERMITA")
-        # Se pega exactamente pegado a la derecha
+        # Texto derecho (C.M.F. ERMITA) con coordenadas fijas respetadas
+        txt_der = generar_tira_rotada_masiva("C.M.F. ERMITA")
         template.paste(txt_der, (canvas_width - txt_der.width - 5, 0), txt_der)
 
         # Guardar imagen procesada temporalmente
@@ -147,7 +132,7 @@ if uploaded_images:
             output_video_path, fps=24, codec="libx264", audio=False
         )
 
-        st.success("¡Video generado con éxito! Textos verticales alineados de extremo a extremo.")
+        st.success("¡Video generado con éxito! Letras colosales aplicadas.")
 
         # Reproductor y Botón de Descarga
         st.subheader("▶️ Vista previa del video:")
