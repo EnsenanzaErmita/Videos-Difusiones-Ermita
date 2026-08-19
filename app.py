@@ -12,14 +12,34 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tus imágenes del día, define la duración y genera tu video con plantilla institucional."
+    "Sube tu imagen principal, tus dos imágenes laterales y genera tu video institucional de forma automática."
 )
 
-# 1. Sección para cargar imágenes
+# 1. Cargar imágenes laterales institucionales fijas o personalizadas opcionales
+st.subheader("📌 1. Imágenes Laterales (Izquierda y Derecha)")
+col_l, col_r = st.columns(2)
+
+with col_l:
+  img_lat_izq_file = st.file_uploader(
+      "Imagen lateral IZQUIERDA (ej. Logo/Escudo):",
+      type=["png", "jpg", "jpeg"],
+      key="lat_izq",
+  )
+
+with col_r:
+  img_lat_der_file = st.file_uploader(
+      "Imagen lateral DERECHA (ej. Institución/Campaña):",
+      type=["png", "jpg", "jpeg"],
+      key="lat_der",
+  )
+
+# 2. Sección para cargar las imágenes principales del día
+st.subheader("🖼️ 2. Imágenes Principales del Día")
 uploaded_images = st.file_uploader(
-    "Sube tus imágenes (puedes seleccionar varias a la vez):",
+    "Sube las fotos centrales del día (puedes seleccionar varias):",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True,
+    key="principal",
 )
 
 # Configuración de duración por imagen
@@ -31,16 +51,11 @@ duracion_imagen = st.slider(
 )
 
 if uploaded_images:
-  st.subheader("🖼️ Imágenes seleccionadas:")
-  cols = st.columns(min(len(uploaded_images), 4))
-  for idx, img_file in enumerate(uploaded_images):
-    with cols[idx % 4]:
-      img = Image.open(img_file)
-      st.image(img, caption=f"Imagen {idx+1}", use_container_width=True)
-
-  # 2. Botón para crear el video
-  if st.button("🚀 Crear Video"):
-    with st.spinner("Generando video con texto masivo (Tamaño Colosal)..."):
+  # 3. Botón para crear el video
+  if st.button("🚀 Crear Video Institucional"):
+    with st.spinner(
+        "Generando plantillas con elementos laterales y título superior..."
+    ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -48,75 +63,98 @@ if uploaded_images:
       canvas_width, canvas_height = 1280, 720
       canvas_size = (canvas_width, canvas_height)
 
-      # FUENTE GIGANTE EXTREMA (320 px) para abarcar todo el alto disponible
+      # Preparar imagen lateral izquierda si existe
+      lat_izq_img = None
+      if img_lat_izq_file:
+        lat_izq_img = Image.open(img_lat_izq_file).convert("RGBA")
+
+      # Preparar imagen lateral derecha si existe
+      lat_der_img = None
+      if img_lat_der_file:
+        lat_der_img = Image.open(img_lat_der_file).convert("RGBA")
+
+      # Cargar fuente para el título superior horizontal
       try:
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font = ImageFont.truetype(font_path, 320)
+        font_titulo = ImageFont.truetype(font_path, 45)
       except:
-        font = ImageFont.load_default()
+        font_titulo = ImageFont.load_default()
 
-      # Procesar cada imagen con la plantilla institucional
+      # Procesar cada imagen principal
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
-
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
 
-        # 1. Crear lienzo base en Blanco
+        # 1. Lienzo base en Blanco
         template = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(template)
 
-        # 2. Ajustar la foto central
-        max_img_width = 820
-        max_img_height = 460
+        # 2. Imagen Central (Ajustada para dejar espacio a los lados y arriba/abajo)
+        max_img_width = 700
+        max_img_height = 480
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
-        # 3. Líneas centrales con gran grosor
-        draw.rectangle(
-            [
-                (0, canvas_height // 2 - 25),
-                (canvas_width, canvas_height // 2 + 25),
-            ],
-            fill="#6B1426",
-        )
-        draw.rectangle(
-            [
-                (0, canvas_height // 2 - 8),
-                (canvas_width, canvas_height // 2 + 8),
-            ],
-            fill="#D4AF37",
-        )
-
-        # 4. Centrar la foto en el lienzo
+        # Coordenadas centrales de la imagen principal
         paste_x = (canvas_width - img.width) // 2
-        paste_y = (canvas_height - img.height) // 2
+        paste_y = ((canvas_height - img.height) // 2) + 30
         template.paste(img, (paste_x, paste_y))
 
-        # 5. Motor enfocado al 100% en tamaño masivo de la letra
-        def generar_tira_rotada_masiva(texto):
-          # Creamos una tira horizontal grande de 1280 de ancho (el largo exacto del video) por 380 de alto
-          tira = Image.new("RGBA", (1280, 380), (255, 255, 255, 0))
-          d = ImageDraw.Draw(tira)
-          
-          # Escribir el texto con la fuente gigante de 320px centrada horizontalmente
-          bbox = d.textbbox((0, 0), texto, font=font)
-          text_width = bbox[2] - bbox[0]
-          
-          x_pos = (1280 - text_width) // 2
-          y_pos = (380 - 320) // 2 - 20
-          
-          d.text((x_pos, y_pos), texto, fill="#6B1426", font=font)
-          
-          # Rotar 90 grados para que ocupe de arriba a abajo con la escala colosal
-          return tira.rotate(90, expand=True)
+        # 3. Insertar imagen lateral IZQUIERDA (Debe medir 1 cuarto de la original aprox o un tamaño proporcional adecuado)
+        if lat_izq_img:
+          # Redimensionar a un cuarto de la anchura estándar o escala proporcional
+          target_w = img.width // 2.5
+          target_h = int(
+              lat_izq_img.height
+              * (target_w / lat_izq_img.width)
+          )
+          lat_izq_resized = lat_izq_img.resize(
+              (int(target_w), int(target_h)), Image.Resampling.LANCZOS
+          )
+          # Centrada a la izquierda del espacio libre
+          pos_izq_x = 40
+          pos_izq_y = (
+              canvas_height - lat_izq_resized.height
+          ) // 2 + 30
+          template.paste(
+              lat_izq_resized,
+              (pos_izq_x, pos_izq_y),
+              lat_izq_resized,
+          )
 
-        # Texto izquierdo (ISSSTE) con coordenadas fijas respetadas
-        txt_izq = generar_tira_rotada_masiva("ISSSTE")
-        template.paste(txt_izq, (5, 0), txt_izq)
+        # 4. Insertar imagen lateral DERECHA
+        if lat_der_img:
+          target_w = img.width // 2.5
+          target_h = int(
+              lat_der_img.height
+              * (target_w / lat_der_img.width)
+          )
+          lat_der_resized = lat_der_img.resize(
+              (int(target_w), int(target_h)), Image.Resampling.LANCZOS
+          )
+          # Centrada a la derecha del espacio libre
+          pos_der_x = canvas_width - lat_der_resized.width - 40
+          pos_der_y = (
+              canvas_height - lat_der_resized.height
+          ) // 2 + 30
+          template.paste(
+              lat_der_resized,
+              (pos_der_x, pos_der_y),
+              lat_der_resized,
+          )
 
-        # Texto derecho (C.M.F. ERMITA) con coordenadas fijas respetadas
-        txt_der = generar_tira_rotada_masiva("C.M.F. ERMITA")
-        template.paste(txt_der, (canvas_width - txt_der.width - 5, 0), txt_der)
+        # 5. Título superior horizontal en la parte izquierda: "C.M.F. ERMITA"
+        # Franja superior institucional opcional o texto directo con colores institucionales (#6B1426 Guinda)
+        draw.text(
+            (45, 35),
+            "C.M.F. ERMITA",
+            fill="#6B1426",
+            font=font_titulo,
+        )
+
+        # Línea divisoria elegante bajo el título
+        draw.rectangle([(45, 90), (canvas_width - 45, 96)], fill="#6B1426")
+        draw.rectangle([(45, 97), (canvas_width - 45, 101)], fill="#D4AF37")
 
         # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
@@ -132,7 +170,9 @@ if uploaded_images:
             output_video_path, fps=24, codec="libx264", audio=False
         )
 
-        st.success("¡Video generado con éxito! Letras colosales aplicadas.")
+        st.success(
+            "¡Video institucional con imágenes laterales generado con éxito!"
+        )
 
         # Reproductor y Botón de Descarga
         st.subheader("▶️ Vista previa del video:")
