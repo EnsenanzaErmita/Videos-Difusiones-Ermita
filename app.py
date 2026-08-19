@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 from moviepy import ImageSequenceClip
 import streamlit as st
 
@@ -30,7 +30,6 @@ duracion_imagen = st.slider(
 
 if uploaded_images:
   st.subheader("🖼️ Imágenes seleccionadas:")
-  # Mostrar las imágenes en una cuadrícula
   cols = st.columns(min(len(uploaded_images), 4))
   for idx, img_file in enumerate(uploaded_images):
     with cols[idx % 4]:
@@ -40,28 +39,43 @@ if uploaded_images:
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
     with st.spinner(
-        "Procesando, ajustando tamaños y generando el video... Por favor espera."
+        "Aplicando plantilla, centrando imágenes y generando el video..."
     ):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
       image_paths = []
-      # Definir un tamaño estándar fijo para todas las imágenes del video (Ej. 1280x720 HD)
-      target_size = (1280, 720)
+      
+      # Definir el tamaño del lienzo de la "plantilla" (Formato Horizontal HD)
+      canvas_size = (1280, 720)
+      
+      # Color de fondo para los espacios vacíos (puedes elegir "black" o "white")
+      bg_color = "black" 
 
-      # Procesar, estandarizar tamaño y guardar temporalmente
+      # Procesar y ajustar cada imagen a la plantilla proporcionalmente
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
         
-        # Convertir a RGB (por si tienen transparencia PNG)
+        # Convertir a RGB si es necesario
         if img.mode in ("RGBA", "P"):
           img = img.convert("RGB")
-          
-        # Redimensionar la imagen de manera uniforme al tamaño estándar
-        img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
-        
+
+        # Ajustar la imagen proporcionalmente para que quepa dentro de 1280x720 sin deformarse
+        img.thumbnail(canvas_size, Image.Resampling.LANCZOS)
+
+        # Crear un lienzo nuevo del tamaño exacto de la plantilla con el color de fondo
+        template = Image.new("RGB", canvas_size, bg_color)
+
+        # Calcular la posición exacta para centrar la imagen en el lienzo
+        paste_x = (canvas_size[0] - img.width) // 2
+        paste_y = (canvas_size[1] - img.height) // 2
+
+        # Pegar la imagen centrada sobre la plantilla
+        template.paste(img, (paste_x, paste_y))
+
+        # Guardar la imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
-        img_resized.save(path, "JPEG")
+        template.save(path, "JPEG", quality=95)
         image_paths.append(path)
 
       # Definir la ruta del video de salida
@@ -74,7 +88,7 @@ if uploaded_images:
             output_video_path, fps=24, codec="libx264", audio=False
         )
 
-        st.success("¡El video se ha generado con éxito!")
+        st.success("¡El video se ha generado con éxito y sin deformaciones!")
 
         # 3. Reproductor y Botón de Descarga
         st.subheader("▶️ Vista previa del video:")
