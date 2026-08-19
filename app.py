@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-from moviepy.editor import ImageSequenceClip
+from moviepy import ImageSequenceClip
 import streamlit as st
 
 # Configuración de la página
@@ -35,7 +35,7 @@ if uploaded_images:
   for idx, img_file in enumerate(uploaded_images):
     with cols[idx % 4]:
       img = Image.open(img_file)
-      st.image(img, caption=f"Imagen {idx+1}", use_column_width=True)
+      st.image(img, caption=f"Imagen {idx+1}", use_container_width=True)
 
   # 2. Botón para crear el video
   if st.button("🚀 Crear Video"):
@@ -60,7 +60,7 @@ if uploaded_images:
       output_video_path = "video_difusion.mp4"
 
       try:
-        # Crear el clip de video usando MoviePy
+        # Crear el clip de video usando MoviePy (importación corregida)
         clip = ImageSequenceClip(image_paths, fps=1 / duracion_imagen)
         clip.write_videofile(
             output_video_path, fps=24, codec="libx264", audio=False
