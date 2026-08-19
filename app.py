@@ -12,7 +12,7 @@ st.set_page_config(
 
 st.title("🎬 Generador Diario de Videos para Difusión")
 st.write(
-    "Sube tu imagen principal en tamaño grande, tus dos imágenes laterales y genera tu video institucional."
+    "Sube tu imagen principal en gran tamaño, tus dos imágenes laterales y genera tu video institucional limpio."
 )
 
 # 1. Cargar imágenes laterales institucionales (izquierda y derecha)
@@ -53,9 +53,7 @@ duracion_imagen = st.slider(
 if uploaded_images:
   # 3. Botón para crear el video
   if st.button("🚀 Crear Video Institucional"):
-    with st.spinner(
-        "Generando plantilla con imagen central ampliada y sin deformación..."
-    ):
+    with st.spinner("Generando plantilla limpia con imagen central ampliada..."):
       temp_dir = "temp_imagenes"
       os.makedirs(temp_dir, exist_ok=True)
 
@@ -73,13 +71,6 @@ if uploaded_images:
       if img_lat_der_file:
         lat_der_img = Image.open(img_lat_der_file).convert("RGBA")
 
-      # Cargar fuente para el título superior horizontal grande
-      try:
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_titulo = ImageFont.truetype(font_path, 65)
-      except:
-        font_titulo = ImageFont.load_default()
-
       # Procesar cada imagen principal
       for idx, img_file in enumerate(uploaded_images):
         img = Image.open(img_file)
@@ -93,29 +84,29 @@ if uploaded_images:
         # 2. Dibujar las líneas guinda y dorada al centro (por detrás)
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 45),
-                (canvas_width, canvas_height // 2 + 45),
+                (0, canvas_height // 2 - 50),
+                (canvas_width, canvas_height // 2 + 50),
             ],
             fill="#6B1426",
         )
         draw.rectangle(
             [
-                (0, canvas_height // 2 - 15),
-                (canvas_width, canvas_height // 2 + 15),
+                (0, canvas_height // 2 - 18),
+                (canvas_width, canvas_height // 2 + 18),
             ],
             fill="#D4AF37",
         )
 
         # 3. Procesar y pegar la Imagen Central Principal (Ampliación máxima sin deformar)
-        max_img_width = 950  # Mucho más grande
-        max_img_height = 550
+        max_img_width = 980
+        max_img_height = 580
         img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
 
         paste_x = (canvas_width - img.width) // 2
-        paste_y = ((canvas_height - img.height) // 2) + 25
+        paste_y = (canvas_height - img.height) // 2
         template.paste(img, (paste_x, paste_y))
 
-        # 4. Insertar imagen lateral IZQUIERDA (Proporcional a 1 cuarto de tamaño)
+        # 4. Insertar imagen lateral IZQUIERDA (Proporcional)
         if lat_izq_img:
           target_w = img.width // 4.5
           target_h = int(
@@ -126,9 +117,7 @@ if uploaded_images:
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
           pos_izq_x = 35
-          pos_izq_y = (
-              canvas_height - lat_izq_resized.height
-          ) // 2 + 25
+          pos_izq_y = (canvas_height - lat_izq_resized.height) // 2
           template.paste(
               lat_izq_resized,
               (pos_izq_x, pos_izq_y),
@@ -146,22 +135,12 @@ if uploaded_images:
               (int(target_w), int(target_h)), Image.Resampling.LANCZOS
           )
           pos_der_x = canvas_width - lat_der_resized.width - 35
-          pos_der_y = (
-              canvas_height - lat_der_resized.height
-          ) // 2 + 25
+          pos_der_y = (canvas_height - lat_der_resized.height) // 2
           template.paste(
               lat_der_resized,
               (pos_der_x, pos_der_y),
               lat_der_resized,
           )
-
-        # 6. Título superior horizontal grande en la parte izquierda: "C.M.F. ERMITA"
-        draw.text(
-            (45, 25),
-            "C.M.F. ERMITA",
-            fill="#6B1426",
-            font=font_titulo,
-        )
 
         # Guardar imagen procesada temporalmente
         path = os.path.join(temp_dir, f"img_{idx:03d}.jpg")
@@ -178,7 +157,7 @@ if uploaded_images:
         )
 
         st.success(
-            "¡Video institucional generado con éxito (imagen central ampliada sin deformar)!"
+            "¡Video institucional generado con éxito (limpio de textos y con imagen central ampliada)!"
         )
 
         # Reproductor y Botón de Descarga
